@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cduestc.mybatis.dao.EmployeeMapperDynamicSQL">
+	<select id="getEmpsByIf" resultType="com.cduestc.mybatis.Employee">
+		select * from tbl_employee
+		where 
+		<!-- test:表达式(OGNL)表达式 
+		OGNL表达式使用：和EL表达式相同
+		遇见特殊字符应该去转义字符
+		&&;=> &amp -->
+		<if test="id!=null">
+			id = #{id}
+		</if>
+		<if test="lastname!=null &amp;&amp; lastname !=&quot;&quot;">
+			and last_name like #{lastname}
+		</if>
+		<if test="email!=null and email.trim()!=&quot;&quot;">
+			and email =#{email}
+		</if>
+		<!--OGNL会进行字符串与数字进行判断  -->
+		<if test="gender==0 or gender==1">
+		and gender=#{gender};
+		</if>
+	</select>
+	
+	<select id="getEmpsByTrim" resultType="com.cduestc.mybatis.Employee">
+		select * from tbl_employee
+		<!--
+		trim标签:
+			prefix="":前缀:trim标签体重是整个字符串拼接后的结果
+			prefix给拼串后的整个字符串加一个前缀
+			prefixOverrides:前缀覆盖，去掉整个字符串前面多余的字符
+			suffix：给字符串拼接一个后缀
+			suffixOverrides=""
+				后缀覆盖:去掉整个字符串后面多余的字符
+		  -->
+		<trim prefix="where">
+			<if test="id!=null">
+				id = #{id}
+			</if>
+			<if test="lastname!=null &amp;&amp; lastname !=&quot;&quot;">
+				and last_name like #{lastname}
+			</if>
+			<if test="email!=null and email.trim()!=&quot;&quot;">
+				and email =#{email}
+			</if>
+			<!--OGNL会进行字符串与数字进行判断  -->
+			<if test="gender==0 or gender==1">
+			and gender=#{gender};
+			</if>
+		</trim>
+	</select>
+	
+	<select id="getEmpsByChoose" resultType="com.cduestc.mybatis.Employee">
+		select * from tbl_employee
+		<where>
+			<choose>
+				<when test="id!=null">
+					id=#{id}
+				</when>		
+				<when test="lastname!=null">
+					last_name like #{lastname}
+				</when>
+				<when test="email!=null">
+					email = #{email}
+				</when>
+				<otherwise>
+					gender = 2;
+				</otherwise>
+			</choose>
+		</where>
+	</select>
+	
+	<update id="updateEmp">
+		update tbl_employee
+		<set><!--set包含查询语句的条件部分，可以避免逗号引起的错误  -->
+			<if test="lastname!=null">
+				last_name=#{lastname},
+			</if>
+			<if test="email!=null">
+				email=#{email},
+			</if>
+			<if test="gender!=null">
+				gender=#{gender},
+			</if>
+		</set>
+		<where>
+			id=#{id};
+		</where>
+	</update>
+	<!--trim标签的更新 直接后缀覆盖逗号 -->
+	<update id="updateEmpByTrim">
+		update tbl_employee
+		<trim prefix="set" suffixOverrides=",">
+			<if test="lastname!=null">
+				last_name=#{lastname},
+			</if>
+			<if test="email!=null">
+				email=#{email},
+			</if>
+			<if test="gender!=null">
+				gender=#{gender},
+			</if>
+		</trim>
+		<where>
+			id=#{id};
+		</where>
+	</update>
+	
+	<!--foreach标签  -->
+	<select id="getEmpsByForeach" resultType="com.cduestc.mybatis.Employee">
+		select * from tbl_employee 
+		<!-- collection：要遍历的集合
+			list类型的参数会特殊处理封装在map中，map的key就叫list
+			item:将当前遍历出的元素赋给指定的变量
+			separator：每个元素之间的分隔符
+			open：遍历出所有结果拼接开始的字符
+			close:结果拼接结束的字符
+			index:索引，遍历list的时候是index就是索引，item就是当前值
+						遍历map的时候index表示的就是map的key，item就是map的值
+		 -->
+		<foreach collection="ids" item="item_id" separator="," open="where id in(" close=")">
+			#{item_id}
+		</foreach>
+	</select>
+	
+	<!--批量保存 (第一种)推荐 -->
+	<insert id="addEmps">
+			insert into tbl_employee(last_name,email,gender,d_id)
+			values
+			<foreach collection="emps" item="emp" separator=",">
+				(#{emp.lastname},#{emp.email},#{emp.gender},#{emp.dept.did})
+			</foreach>
+	</insert>
+	<!--批量保存 (第二种) 分隔符是;用的是条语句的保存-->
+	<insert id="addEmps2">
+			<foreach collection="emps2" item="emp" separator=";">
+				insert into tbl_employee(last_name,email,gender,d_id) 
+				values(#{emp.lastname},#{emp.email},#{emp.gender},#{emp.dept.did})
+			</foreach>
+	</insert>
+	
+</mapper>
